@@ -12,8 +12,13 @@ import pandas as pd
 from preprocess import CoronaPreprocess
 from elements_builder import make_table, make_map, make_bar, make_line
 
-# Data preprocessing
+# Initialize preprocessor
 preprocess = CoronaPreprocess()
+preprocess.set_data_repo(
+    "https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data"
+)
+
+# Data preprocessing
 countries_df = preprocess.start_daily_prep()
 total_df = preprocess.start_total_prep()
 conditions = preprocess.get_condition()
