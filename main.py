@@ -15,14 +15,17 @@ from elements_builder import make_table, make_map, make_bar, make_line
 # Initialize preprocessor
 preprocess = CoronaPreprocess()
 preprocess.set_data_repo(
-    "https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data"
+    "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data"
 )
-
+preprocess.load_daily_data()
+preprocess.load_time_data()
+# https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/07-21-2020.csv
+# https://raw.githubusercontent.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports/11-09-2020.csv
 # Data preprocessing
 countries_df = preprocess.start_daily_prep()
 total_df = preprocess.start_total_prep()
 conditions = preprocess.get_condition()
-# global_total_df = preprocess.start_time_prep()
+global_total_df = preprocess.start_time_prep()
 
 options_by_countries = countries_df.sort_values("국가 구분").reset_index()
 options_by_countries = options_by_countries["국가 구분"]
@@ -105,7 +108,6 @@ app.layout = html.Div(
 @app.callback(Output("country-graph", "figure"), [Input("country", "value")])
 def update_hello(country_name):
     global_total_df = preprocess.start_time_prep()
-    # print(global_total_df)
     if country_name:
         preprocess.set_country(country_name)
         global_total_df = preprocess.start_time_prep_by_country()
@@ -117,5 +119,5 @@ def update_hello(country_name):
 
 server = app.server
 
-# if __name__ == "__main__":
-#     app.run_server(debug=True)
+if __name__ == "__main__":
+    app.run_server(debug=True)

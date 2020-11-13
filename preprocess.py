@@ -5,14 +5,18 @@ import pandas as pd
 class CoronaPreprocess:
 
     _CONDITION = ["confirmed", "deaths", "recovered"]
+    _DAILY_REPO_PATH = "csse_covid_19_daily_reports/"
+    _TIME_REPO_PATH = "csse_covid_19_time_series/"
 
-    def __init__(self, data_repo=os.getcwd() + "/data/COVID-19/csse_covid_19_data/"):
+    def __init__(self, data_repo=os.getcwd() + "/data/COVID-19/csse_covid_19_data"):
         self.data_repo = data_repo
-        self.daily_repo = data_repo + "csse_covid_19_daily_reports/"
-        self.time_repo = data_repo + "csse_covid_19_time_series/"
+        self.daily_repo = data_repo + "/csse_covid_19_daily_reports/"
+        self.time_repo = data_repo + "/csse_covid_19_time_series/"
         self.date = "11-09-2020"
         self.country = "Korea, South"
-        self.time_df = pd.DataFrame()
+        self.time_confirmed_df = pd.DataFrame()
+        self.time_deaths_df = pd.DataFrame()
+        self.time_recovered_df = pd.DataFrame()
         self.day_df = pd.DataFrame()
         self.print_repo()
 
@@ -58,6 +62,7 @@ class CoronaPreprocess:
         country,
         condition,
     ):
+
         expected_idx = ["Province/State", "Country/Region", "Lat", "Long"]
         # Data transform
         df = df.loc[df["Country/Region"] == country]
@@ -67,14 +72,12 @@ class CoronaPreprocess:
         return df
 
     def _merge_df_by_conditions(self, conditions=_CONDITION):
-        merged_df = None
-        for condition in conditions:
-            self.load_time_data(condition)
-            df = self.time_df
-            if merged_df is None:
-                merged_df = self._time_series_prep(df, condition)
-            else:
-                merged_df = merged_df.merge(self._time_series_prep(df, condition))
+        c_df = self.time_confirmed_df
+        d_df = self.time_deaths_df
+        r_df = self.time_recovered_df
+        merged_df = self._time_series_prep(c_df, conditions[0])
+        merged_df = merged_df.merge(self._time_series_prep(d_df, conditions[1]))
+        merged_df = merged_df.merge(self._time_series_prep(r_df, conditions[2]))
         merged_df = merged_df.rename(
             columns={
                 "date": "날짜",
@@ -86,22 +89,22 @@ class CoronaPreprocess:
         return merged_df
 
     def _merge_df_by_cond_with_country(self, country, conditions=_CONDITION):
-        merged_df = None
-        for cond in conditions:
-            self.load_time_data(cond)
-            df = self.time_df
-            if merged_df is None:
-                merged_df = self._time_series_prep_by_country(df, country, cond)
-            else:
-                merged_df = merged_df.merge(
-                    self._time_series_prep_by_country(df, country, cond)
-                )
+        c_df = self.time_confirmed_df
+        d_df = self.time_deaths_df
+        r_df = self.time_recovered_df
+        merged_df = self._time_series_prep_by_country(c_df, country, conditions[0])
+        merged_df = merged_df.merge(
+            self._time_series_prep_by_country(d_df, country, conditions[1])
+        )
+        merged_df = merged_df.merge(
+            self._time_series_prep_by_country(r_df, country, conditions[2])
+        )
         merged_df = merged_df.rename(
             columns={
+                "date": "날짜",
                 "confirmed": "확진자 수",
                 "deaths": "사망자 수",
                 "recovered": "완치자 수",
-                "date": "날짜",
             }
         )
         return merged_df
@@ -115,6 +118,8 @@ class CoronaPreprocess:
 
     def set_data_repo(self, data_repo_path):
         self.data_repo = data_repo_path
+        self.set_daily_repo(data_repo_path + "/csse_covid_19_daily_reports/")
+        self.set_time_repo(data_repo_path + "/csse_covid_19_time_series/")
         self.print_repo()
         return self
 
@@ -142,20 +147,30 @@ class CoronaPreprocess:
         print(f"[LOADED]: {daily_data_path}")
         return self
 
-    def load_time_data(self, condition="confirmed"):
-        time_data_path = self.time_repo + f"time_series_covid19_{condition}_global.csv"
-        self.time_df = pd.read_csv(time_data_path)
-        print(f"[LOADED]: {time_data_path}")
+    def load_time_data(self, conditions=_CONDITION):
+        time_confirmed_data = (
+            self.time_repo + f"time_series_covid19_{conditions[0]}_global.csv"
+        )
+        time_deaths_data = (
+            self.time_repo + f"time_series_covid19_{conditions[1]}_global.csv"
+        )
+        time_recovered_data = (
+            self.time_repo + f"time_series_covid19_{conditions[2]}_global.csv"
+        )
+        self.time_confirmed_df = pd.read_csv(time_confirmed_data)
+        self.time_deaths_df = pd.read_csv(time_deaths_data)
+        self.time_recovered_df = pd.read_csv(time_recovered_data)
+        print(f"[LOADED]: {time_confirmed_data}")
+        print(f"[LOADED]: {time_deaths_data}")
+        print(f"[LOADED]: {time_recovered_data}")
         return self
 
     def start_total_prep(self):
-        self.load_daily_data()
         df = self.day_df
         df = self._total_prep(df)
         return df
 
     def start_daily_prep(self):
-        self.load_daily_data()
         df = self.day_df
         date = self.date
         df = self._daily_prep(df, date)
